@@ -27,6 +27,7 @@ type Trip = {
 export default function Home() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(false);
 
   // New trip form state
   const [isCreating, setIsCreating] = useState(false);
@@ -40,12 +41,18 @@ export default function Home() {
 
   useEffect(() => {
     fetch("/api/trips")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Database not connected");
+        return res.json();
+      })
       .then((data) => {
         setTrips(data || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        setDbError(true);
+        setLoading(false);
+      });
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -100,6 +107,30 @@ export default function Home() {
           {loading ? (
             <div className="flex justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            </div>
+          ) : dbError ? (
+            <div className="text-center py-16 px-6 border border-rose-900/50 rounded-2xl bg-rose-950/20 backdrop-blur-md">
+              <div className="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center mx-auto mb-4">
+                <Globe className="w-6 h-6 text-rose-400" />
+              </div>
+              <h3 className="text-xl font-medium text-rose-200">
+                Database Not Connected
+              </h3>
+              <p className="text-rose-400/80 mt-2 max-w-sm mx-auto text-sm">
+                No local database fallback is configured. Please set the{" "}
+                <code className="bg-rose-950 px-1 py-0.5 rounded text-rose-300">
+                  TURSO_DATABASE_URL
+                </code>{" "}
+                and{" "}
+                <code className="bg-rose-950 px-1 py-0.5 rounded text-rose-300">
+                  TURSO_AUTH_TOKEN
+                </code>{" "}
+                environment variables in your{" "}
+                <code className="bg-rose-950 px-1 py-0.5 rounded text-rose-300">
+                  .env
+                </code>{" "}
+                file to connect your Turso database.
+              </p>
             </div>
           ) : trips.length === 0 ? (
             <div className="text-center py-20 px-6 border border-neutral-800 rounded-2xl bg-neutral-900/30 backdrop-blur-md">
