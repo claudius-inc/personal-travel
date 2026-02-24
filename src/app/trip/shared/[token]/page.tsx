@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState, use } from "react";
 import { format } from "date-fns";
 import {
   Card,
@@ -8,84 +5,62 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Loader2, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { WeatherWidget } from "@/components/WeatherWidget";
+import { db } from "@/db";
+import { trips, itineraryItems } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 
-type Item = {
-  id: string;
-  dayIndex: number;
-  startTime: string;
-  location: string;
-  description: string;
-};
-
-type Trip = {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  style: string;
-  itineraryItems: Item[];
-  error?: string;
-};
-
-export default function SharedTripDetails({
+export default async function SharedTripDetails({
   params,
 }: {
   params: Promise<{ token: string }>;
 }) {
-  const { token } = use(params);
+  const { token } = await params;
 
-  const [trip, setTrip] = useState<Trip | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Find trip by share token
+  const tripQuery = await db
+    .select()
+    .from(trips)
+    .where(eq(trips.shareToken, token));
 
-  useEffect(() => {
-    const fetchTrip = async () => {
-      try {
-        const res = await fetch(`/api/shared/${token}`);
-        const data = await res.json();
-        setTrip(data);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTrip();
-  }, [token]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-      </div>
-    );
+  if (!tripQuery.length) {
+    notFound();
   }
 
-  if (!trip || trip.error) {
-    return (
-      <div className="text-center py-20 text-xl font-medium">
-        Trip not found.
-      </div>
-    );
-  }
+  const trip = tripQuery[0];
 
-  const itemsByDay = trip.itineraryItems.reduce(
-    (acc: Record<string, Item[]>, item: Item) => {
-      if (!acc[item.dayIndex]) acc[item.dayIndex] = [];
-      acc[item.dayIndex].push(item);
+  const items = await db
+    .select()
+    .from(itineraryItems)
+    .where(eq(itineraryItems.tripId, trip.id));
+
+  const itemsByDay = items.reduce(
+    (acc: Record<string, typeof items>, item) => {
+      const dIndex = item.dayIndex.toString();
+      if (!acc[dIndex]) acc[dIndex] = [];
+      acc[dIndex].push(item);
       return acc;
     },
-    {} as Record<string, Item[]>,
+    {} as Record<string, typeof items>,
   );
 
   return (
     <main className="container mx-auto max-w-4xl py-10 px-4">
       <header className="mb-10 text-center">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-teal-500 to-emerald-500 bg-clip-text text-transparent drop-shadow-sm">
           {trip.name}
         </h1>
-        <p className="text-neutral-400 mt-2 text-lg">
-          {format(new Date(trip.startDate), "MMMM do")} -{" "}
-          {format(new Date(trip.endDate), "MMMM do, yyyy")}
+        <p className="text-neutral-500 mt-2 text-lg">
+          {trip.startDate && trip.endDate ? (
+            <>
+              {format(new Date(trip.startDate), "MMMM do")} -{" "}
+              {format(new Date(trip.endDate), "MMMM do, yyyy")}
+            </>
+          ) : (
+            <span>Flexible Planning Phase</span>
+          )}
         </p>
         <div className="flex justify-center mt-6">
           <WeatherWidget destination={trip.name} />
@@ -102,27 +77,27 @@ export default function SharedTripDetails({
             .sort((a, b) => parseInt(a) - parseInt(b))
             .map((day) => (
               <div key={day} className="relative">
-                <h3 className="text-2xl font-semibold mb-6 flex items-center gap-3">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 text-sm">
+                <h3 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-neutral-900">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-teal-100 text-teal-700 text-sm font-bold shadow-sm">
                     D{day}
                   </span>
                   Day {day}
                 </h3>
-                <div className="space-y-4 pl-4 border-l-2 border-neutral-800 ml-4">
-                  {itemsByDay[day].map((item: Item) => (
+                <div className="space-y-4 pl-4 border-l-2 border-neutral-200 ml-4">
+                  {itemsByDay[day].map((item: (typeof items)[number]) => (
                     <Card
                       key={item.id}
-                      className="bg-neutral-900 border-neutral-800 relative -left-4 w-[calc(100%+16px)]"
+                      className="bg-white border-neutral-200 relative -left-4 w-[calc(100%+16px)] shadow-sm hover:shadow transition-shadow"
                     >
                       <CardHeader className="py-4">
                         <div className="flex justify-between items-start">
                           <div>
-                            <CardTitle className="text-lg text-white">
+                            <CardTitle className="text-lg text-neutral-900">
                               {item.location}
                             </CardTitle>
-                            <CardDescription className="mt-1 flex items-center gap-2">
-                              <MapPin className="w-3 h-3" /> {item.startTime} •{" "}
-                              {item.description}
+                            <CardDescription className="mt-1 flex items-center gap-2 text-neutral-500">
+                              <MapPin className="w-3 h-3 text-neutral-400" />{" "}
+                              {item.startTime} • {item.description}
                             </CardDescription>
                           </div>
                         </div>

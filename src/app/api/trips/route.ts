@@ -23,17 +23,27 @@ export async function POST(request: Request) {
     const shareToken = crypto.randomBytes(8).toString("hex");
 
     // Parse the body
-    const { name, startDate, endDate, style, budget } = body;
+    const {
+      name,
+      startDate,
+      endDate,
+      days,
+      startAirport,
+      endAirport,
+      timeOfYear,
+      style,
+      budget,
+    } = body;
 
-    if (!name || !startDate || !endDate) {
+    if (!name) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required field: name" },
         { status: 400 },
       );
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
 
     const newTrip = await db
       .insert(trips)
@@ -42,6 +52,10 @@ export async function POST(request: Request) {
         name,
         startDate: start,
         endDate: end,
+        days: days ? parseInt(days) : null,
+        startAirport,
+        endAirport,
+        timeOfYear,
         style,
         budget,
         shareToken,

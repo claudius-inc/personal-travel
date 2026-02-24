@@ -20,9 +20,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
-        className={`${inter.className} min-h-screen bg-neutral-950 text-neutral-50 antialiased selection:bg-indigo-500/30`}
+        className={`${inter.className} min-h-screen bg-neutral-50 text-neutral-900 antialiased selection:bg-indigo-500/30`}
       >
         {children}
       </body>

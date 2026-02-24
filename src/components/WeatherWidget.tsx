@@ -45,7 +45,7 @@ export function WeatherWidget({ destination }: { destination: string }) {
 
         const weatherData = await weatherRes.json();
         setWeather(weatherData);
-      } catch (err) {
+      } catch {
         setError("Could not load weather");
       } finally {
         setLoading(false);
@@ -59,7 +59,7 @@ export function WeatherWidget({ destination }: { destination: string }) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-neutral-400 text-sm">
+      <div className="flex items-center gap-2 text-neutral-600 text-sm">
         <Loader2 className="w-4 h-4 animate-spin" /> Fetching weather...
       </div>
     );
@@ -87,13 +87,13 @@ export function WeatherWidget({ destination }: { destination: string }) {
   return (
     <div className="flex items-center gap-3 text-right">
       <div className="flex flex-col">
-        <span className="text-sm font-medium text-neutral-200">
+        <span className="text-sm font-medium text-neutral-800">
           H: {Math.round(maxTemp)}° L: {Math.round(minTemp)}°
         </span>
-        <span className="text-xs text-neutral-400">7-Day Forecast Avail</span>
+        <span className="text-xs text-neutral-500">7-Day Forecast Avail</span>
       </div>
-      <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-700">
-        <WeatherIcon className="w-5 h-5 text-indigo-400" />
+      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center border border-indigo-100 shadow-sm">
+        <WeatherIcon className="w-5 h-5 text-indigo-600" />
       </div>
     </div>
   );
