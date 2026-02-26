@@ -24,14 +24,13 @@ export async function GET(
 
     const trip = tripQuery[0];
 
-    const items = await db
-      .select()
-      .from(itineraryItems)
-      .where(eq(itineraryItems.tripId, trip.id));
-    const tripExpenses = await db
-      .select()
-      .from(expenses)
-      .where(eq(expenses.tripId, trip.id));
+    const [items, tripExpenses] = await Promise.all([
+      db
+        .select()
+        .from(itineraryItems)
+        .where(eq(itineraryItems.tripId, trip.id)),
+      db.select().from(expenses).where(eq(expenses.tripId, trip.id)),
+    ]);
 
     return NextResponse.json({
       ...trip,

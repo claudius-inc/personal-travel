@@ -74,7 +74,7 @@ test.describe("Trip Creation Form - Core User Flows", () => {
     page,
   }) => {
     // Switch to Flexible mode
-    await page.getByText("Flexible").first().click();
+    await page.locator('button:text-is("Flexible")').click();
 
     // Duration and Time of Year fields should be visible
     await expect(page.locator('input[id="days"]')).toBeVisible();
@@ -90,7 +90,7 @@ test.describe("Trip Creation Form - Core User Flows", () => {
     page,
   }) => {
     // Go to Flexible first
-    await page.getByText("Flexible").first().click();
+    await page.locator('button:text-is("Flexible")').click();
     await expect(page.locator('input[id="days"]')).toBeVisible();
 
     // Switch back to Exact Dates
@@ -244,7 +244,7 @@ test.describe("Trip Creation Form - Core User Flows", () => {
     await page.fill('input[id="name"]', uniqueName);
 
     // Switch to Flexible mode
-    await page.getByText("Flexible").first().click();
+    await page.locator('button:text-is("Flexible")').click();
 
     // Fill duration and time of year
     await page.fill('input[id="days"]', "14");

@@ -3,7 +3,7 @@ import { trips, itineraryItems, expenses } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import TripDetailsClient from "../_components/TripDetailsClient";
-import type { Trip } from "../_components/TripDetailsClient";
+import type { TripWithDetails } from "@/types";
 
 export default async function TripDetailsPage({
   params,
@@ -18,25 +18,16 @@ export default async function TripDetailsPage({
     notFound();
   }
 
-  const items = await db
-    .select()
-    .from(itineraryItems)
-    .where(eq(itineraryItems.tripId, id));
+  const [items, tripExpenses] = await Promise.all([
+    db.select().from(itineraryItems).where(eq(itineraryItems.tripId, id)),
+    db.select().from(expenses).where(eq(expenses.tripId, id)),
+  ]);
 
-  const tripExpenses = await db
-    .select()
-    .from(expenses)
-    .where(eq(expenses.tripId, id));
-
-  const trip = {
+  const trip: TripWithDetails = {
     ...tripRecord[0],
-    startDate: tripRecord[0].startDate ?? null,
-    endDate: tripRecord[0].endDate ?? null,
-    style: tripRecord[0].style ?? "solo",
-    budget: tripRecord[0].budget ?? 0,
     itineraryItems: items,
     expenses: tripExpenses,
-  } as Trip;
+  };
 
   return <TripDetailsClient initialTrip={trip} />;
 }

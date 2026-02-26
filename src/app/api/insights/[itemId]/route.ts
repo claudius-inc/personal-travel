@@ -3,9 +3,10 @@ import { locationInsights } from "@/db/schema";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { createInsightSchema } from "@/types";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   context: { params: Promise<{ itemId: string }> },
 ) {
   try {
@@ -36,18 +37,26 @@ export async function POST(
   try {
     const { itemId } = await context.params;
     const body = await request.json();
+    const parsed = createInsightSchema.safeParse(body);
 
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+
+    const { history, funFacts, spontaneousIdeas } = parsed.data;
     const insightId = crypto.randomUUID();
-    const { history, funFacts, spontaneousIdeas } = body;
 
     const newInsight = await db
       .insert(locationInsights)
       .values({
         id: insightId,
         itemId,
-        history,
-        funFacts,
-        spontaneousIdeas,
+        history: history || null,
+        funFacts: funFacts || null,
+        spontaneousIdeas: spontaneousIdeas || null,
       })
       .returning();
 

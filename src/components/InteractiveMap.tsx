@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Loader2 } from "lucide-react";
+import { useGeocode } from "@/lib/useGeocode";
 
 // Fix Leaflet's default icon issue in React
 const defaultIcon = L.icon({
@@ -29,54 +30,42 @@ function MapUpdater({ center }: { center: [number, number] }) {
   return null;
 }
 
+export type MapMarker = {
+  lat: number;
+  lng: number;
+  label: string;
+};
+
 export default function InteractiveMap({
   destination,
+  markers = [],
 }: {
   destination: string;
+  markers?: MapMarker[];
 }) {
-  const [center, setCenter] = useState<[number, number] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { coords, loading: geoLoading } = useGeocode(destination);
 
-  useEffect(() => {
-    async function fetchCoordinates() {
-      try {
-        setLoading(true);
-        const geoRes = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-            destination,
-          )}&count=1&language=en&format=json`,
-        );
-        const geoData = await geoRes.json();
+  const center = useMemo<[number, number] | null>(() => {
+    if (!coords) return null;
+    return [coords.latitude, coords.longitude];
+  }, [coords]);
 
-        if (geoData.results && geoData.results.length > 0) {
-          const { latitude, longitude } = geoData.results[0];
-          setCenter([latitude, longitude]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch coordinates for map", err);
-      } finally {
-        setLoading(false);
-      }
-    }
+  // If we have markers with valid coordinates, fit the map to them
+  const validMarkers = markers.filter((m) => m.lat && m.lng);
 
-    if (destination) {
-      fetchCoordinates();
-    }
-  }, [destination]);
-
-  if (loading) {
+  if (geoLoading) {
     return (
-      <div className="h-[500px] w-full bg-neutral-950 flex flex-col items-center justify-center border-b border-neutral-800">
+      <div className="h-[500px] w-full bg-muted flex flex-col items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-4" />
-        <p className="text-neutral-400">Loading map...</p>
+        <p className="text-muted-foreground">Loading map...</p>
       </div>
     );
   }
 
   if (!center) {
     return (
-      <div className="h-[500px] w-full bg-neutral-950 flex flex-col items-center justify-center border-b border-neutral-800">
-        <p className="text-neutral-400">
+      <div className="h-[500px] w-full bg-muted flex flex-col items-center justify-center">
+        <p className="text-muted-foreground">
           Map unavailable for this destination.
         </p>
       </div>
@@ -87,7 +76,7 @@ export default function InteractiveMap({
     <div className="h-[500px] w-full relative z-0">
       <MapContainer
         center={center}
-        zoom={12}
+        zoom={validMarkers.length > 1 ? 10 : 12}
         scrollWheelZoom={false}
         className="h-full w-full z-0"
       >
@@ -95,13 +84,20 @@ export default function InteractiveMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
+        {/* Always show the destination marker */}
         <Marker position={center}>
           <Popup>
-            <span className="font-semibold text-neutral-900">
-              {destination}
-            </span>
+            <span className="font-semibold">{destination}</span>
           </Popup>
         </Marker>
+        {/* Plot itinerary item markers */}
+        {validMarkers.map((marker, idx) => (
+          <Marker key={idx} position={[marker.lat, marker.lng]}>
+            <Popup>
+              <span className="font-semibold">{marker.label}</span>
+            </Popup>
+          </Marker>
+        ))}
         <MapUpdater center={center} />
       </MapContainer>
     </div>

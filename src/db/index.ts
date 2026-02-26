@@ -5,14 +5,15 @@ import * as schema from "./schema";
 const dbUrl = process.env.TURSO_DATABASE_URL;
 const dbToken = process.env.TURSO_AUTH_TOKEN;
 
-// Throw early if environment variables are completely missing during instantiation
-if (!dbUrl) {
-  // We don't throw an error directly to avoid breaking Next.js build-time static rendering
-  // The route handlers will catch db query failures if the client isn't fully configured
+if (!dbUrl && process.env.NODE_ENV !== "production") {
+  console.warn(
+    "⚠️  TURSO_DATABASE_URL is not set. Database queries will fail at runtime.\n" +
+      "   Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in your .env file.",
+  );
 }
 
 export const client = createClient({
-  url: dbUrl || "libsql://missing-db-url.turso.io", // Dummy URL to prevent createClient from crashing immediately
+  url: dbUrl || "file:local.db",
   authToken: dbToken,
 });
 

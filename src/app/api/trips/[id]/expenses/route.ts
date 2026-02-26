@@ -1,7 +1,9 @@
 import { db } from "@/db";
 import { expenses } from "@/db/schema";
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { createExpenseSchema } from "@/types";
 
 export async function POST(
   request: Request,
@@ -10,17 +12,17 @@ export async function POST(
   try {
     const { id } = await context.params;
     const body = await request.json();
+    const parsed = createExpenseSchema.safeParse(body);
 
-    const expenseId = crypto.randomUUID();
-    const { amount, currency, description, paidBy, date } = body;
-
-    if (amount === undefined || !description || !date) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Validation failed", details: parsed.error.flatten() },
         { status: 400 },
       );
     }
 
+    const { amount, currency, description, paidBy, date } = parsed.data;
+    const expenseId = crypto.randomUUID();
     const expenseDate = new Date(date);
 
     const newExpense = await db
@@ -29,9 +31,9 @@ export async function POST(
         id: expenseId,
         tripId: id,
         amount,
-        currency: currency || "USD",
+        currency,
         description,
-        paidBy,
+        paidBy: paidBy || null,
         date: expenseDate,
       })
       .returning();
@@ -41,6 +43,37 @@ export async function POST(
     console.error(err);
     return NextResponse.json(
       { error: "Failed to add expense" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const expenseId = searchParams.get("expenseId");
+
+    if (!expenseId) {
+      return NextResponse.json(
+        { error: "Missing expenseId query parameter" },
+        { status: 400 },
+      );
+    }
+
+    const deleted = await db
+      .delete(expenses)
+      .where(eq(expenses.id, expenseId))
+      .returning();
+
+    if (!deleted.length) {
+      return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json(
+      { error: "Failed to delete expense" },
       { status: 500 },
     );
   }

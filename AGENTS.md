@@ -10,6 +10,7 @@ We are building a Personal Travel App integrated with an OpenClaw AI agent.
 - PWA: Serwist (`@serwist/next`) for offline service worker caching
 - Validation & Types: Husky pre-commit hook (`npm run lint && npx tsc --noEmit`)
 - Best Practices: Strict separation of React Server Components and nested Client Components to optimize data fetching.
+- Code Quality: Strict `zod` validation, centralized `next-themes` dark mode support, and DRY shared components (`ItineraryTimeline`, `useGeocode`).
 
 ## User Flows
 

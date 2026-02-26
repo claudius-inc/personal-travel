@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { trips } from "@/db/schema";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { createTripSchema } from "@/types";
 
 export async function GET() {
   try {
@@ -19,10 +20,15 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const id = crypto.randomUUID();
-    const shareToken = crypto.randomBytes(8).toString("hex");
+    const parsed = createTripSchema.safeParse(body);
 
-    // Parse the body
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+
     const {
       name,
       startDate,
@@ -33,14 +39,10 @@ export async function POST(request: Request) {
       timeOfYear,
       style,
       budget,
-    } = body;
+    } = parsed.data;
 
-    if (!name) {
-      return NextResponse.json(
-        { error: "Missing required field: name" },
-        { status: 400 },
-      );
-    }
+    const id = crypto.randomUUID();
+    const shareToken = crypto.randomBytes(8).toString("hex");
 
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
@@ -52,10 +54,10 @@ export async function POST(request: Request) {
         name,
         startDate: start,
         endDate: end,
-        days: days ? parseInt(days) : null,
-        startAirport,
-        endAirport,
-        timeOfYear,
+        days: days ? parseInt(String(days)) : null,
+        startAirport: startAirport || null,
+        endAirport: endAirport || null,
+        timeOfYear: timeOfYear || null,
         style,
         budget,
         shareToken,

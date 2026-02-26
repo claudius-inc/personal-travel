@@ -12,6 +12,8 @@ export const trips = sqliteTable("trips", {
   style: text("style"),
   budget: real("budget"),
   shareToken: text("share_token"),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).default(new Date()),
 });
 
 export const itineraryItems = sqliteTable("itinerary_items", {
@@ -27,6 +29,7 @@ export const itineraryItems = sqliteTable("itinerary_items", {
   address: text("address"),
   lat: real("lat"),
   lng: real("lng"),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(new Date()),
 });
 
 export const locationInsights = sqliteTable("location_insights", {
@@ -49,4 +52,5 @@ export const expenses = sqliteTable("expenses", {
   description: text("description").notNull(),
   paidBy: text("paid_by"),
   date: integer("date", { mode: "timestamp" }).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).default(new Date()),
 });
