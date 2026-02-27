@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Sun,
   Link as LinkIcon,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -28,6 +29,11 @@ import { ItineraryTimeline } from "@/components/ItineraryTimeline";
 import { ChatPanel } from "@/components/ChatPanel";
 import { TodayView } from "@/components/TodayView";
 import { ExpenseAnalytics } from "@/components/ExpenseAnalytics";
+import { ReceiptScanner } from "@/components/ReceiptScanner";
+import { VoiceExpenseInput } from "@/components/VoiceExpenseInput";
+import { TripSummary } from "@/components/TripSummary";
+import { ExportMenu } from "@/components/ExportMenu";
+import { PresenceIndicator } from "@/components/PresenceIndicator";
 import type {
   TripWithDetails,
   Insight,
@@ -300,6 +306,31 @@ export default function TripDetailsClient({
     if (res.ok) await fetchTripManual();
   };
 
+  const handleVoiceExpense = async (parsed: {
+    amount: number;
+    description: string;
+    currency: string;
+  }) => {
+    setAddingExpense(true);
+    try {
+      const res = await fetch(`/api/trips/${trip.id}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parsed.amount,
+          description: parsed.description,
+          date: new Date().toISOString().split("T")[0],
+          currency: parsed.currency,
+        }),
+      });
+      if (res.ok) {
+        await fetchTripManual();
+      }
+    } finally {
+      setAddingExpense(false);
+    }
+  };
+
   const handleCopyShareLink = async () => {
     if (!trip.shareToken) return;
     const shareUrl = `${window.location.origin}/trip/shared/${trip.shareToken}`;
@@ -381,7 +412,11 @@ export default function TripDetailsClient({
                 ${trip.budget || 0}
               </span>
             </div>
+            {/* Presence Indicator */}
+            <PresenceIndicator tripId={trip.id} shareToken={trip.shareToken} />
+            
             <div className="flex gap-2">
+              <ExportMenu trip={trip} />
               <Button
                 variant="outline"
                 size="sm"
@@ -412,42 +447,51 @@ export default function TripDetailsClient({
       <Tabs defaultValue={isOnTrip ? "today" : "itinerary"} className="w-full">
         <div className="overflow-x-auto -mx-3 px-3 sm:-mx-0 sm:px-0">
         <TabsList
-          className="flex w-max sm:w-full max-w-2xl bg-muted border border-border rounded-lg p-1 mb-8"
-          style={{
-            display: "flex",
-          }}
+          className="flex w-max sm:w-full max-w-3xl bg-muted border border-border rounded-lg p-1 mb-8"
         >
           {isOnTrip && (
             <TabsTrigger
               value="today"
-              className="rounded-md data-[state=active]:bg-background data-[state=active]:text-amber-600 data-[state=active]:shadow-sm text-muted-foreground"
+              className="rounded-md data-[state=active]:bg-background data-[state=active]:text-amber-600 data-[state=active]:shadow-sm text-muted-foreground flex items-center justify-center gap-2 px-2 sm:px-4"
             >
-              <Sun className="w-4 h-4 mr-2" /> Today
+              <Sun className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Today</span>
             </TabsTrigger>
           )}
           <TabsTrigger
             value="itinerary"
-            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground"
+            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground flex items-center justify-center gap-2 px-2 sm:px-4"
           >
-            <CalendarDays className="w-4 h-4 mr-2" /> Itinerary
+            <CalendarDays className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Itinerary</span>
           </TabsTrigger>
           <TabsTrigger
             value="map"
-            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground"
+            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground flex items-center justify-center gap-2 px-2 sm:px-4"
           >
-            <MapPin className="w-4 h-4 mr-2" /> Map
+            <MapPin className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Map</span>
           </TabsTrigger>
           <TabsTrigger
             value="expenses"
-            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground"
+            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground flex items-center justify-center gap-2 px-2 sm:px-4"
           >
-            <Receipt className="w-4 h-4 mr-2" /> Expenses
+            <Receipt className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Expenses</span>
           </TabsTrigger>
           <TabsTrigger
             value="chat"
-            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground"
+            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground flex items-center justify-center gap-2 px-2 sm:px-4"
           >
-            <MessageSquare className="w-4 h-4 mr-2" /> AI Chat
+            <MessageSquare className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">AI Chat</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="summary"
+            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground flex items-center justify-center gap-2 px-2 sm:px-4"
+          >
+            <BookOpen className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Summary</span>
           </TabsTrigger>
         </TabsList>
         </div>
@@ -458,7 +502,7 @@ export default function TripDetailsClient({
             value="today"
             className="animate-in fade-in slide-in-from-bottom-4 duration-500"
           >
-            <TodayView trip={trip} todayDayIndex={todayDayIndex} />
+            <TodayView trip={trip} todayDayIndex={todayDayIndex} onItemUpdate={handleItemUpdate} />
           </TabsContent>
         )}
 
@@ -642,11 +686,32 @@ export default function TripDetailsClient({
             <div>
               <Card className="bg-card border-border shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-card-foreground">
-                    Add Expense
-                  </CardTitle>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <CardTitle className="text-card-foreground">
+                      Add Expense
+                    </CardTitle>
+                    <ReceiptScanner
+                      onDataExtracted={(data) => {
+                        setNewExpense({
+                          amount: data.amount,
+                          description: data.description,
+                          date: data.date,
+                          currency: data.currency,
+                        });
+                      }}
+                    />
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                  {/* Voice Input Section */}
+                  <div className="pb-4 border-b border-border">
+                    <VoiceExpenseInput
+                      onExpenseParsed={handleVoiceExpense}
+                      defaultCurrency={newExpense.currency}
+                    />
+                  </div>
+
+                  {/* Manual Form */}
                   <form onSubmit={handleAddExpense} className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-muted-foreground">Amount</Label>
@@ -736,6 +801,14 @@ export default function TripDetailsClient({
           className="animate-in fade-in slide-in-from-bottom-4 duration-500"
         >
           <ChatPanel tripId={trip.id} onItemsAdded={fetchTripManual} />
+        </TabsContent>
+
+        {/* Trip Summary Tab */}
+        <TabsContent
+          value="summary"
+          className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <TripSummary trip={trip} />
         </TabsContent>
       </Tabs>
     </main>

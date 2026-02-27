@@ -109,4 +109,8 @@ export const updateItemSchema = z.object({
   lat: z.number().optional(),
   lng: z.number().optional(),
   sortOrder: z.number().int().min(0).optional(),
+  phoneNumber: z.string().optional(),
+  website: z.string().optional(),
+  skipped: z.boolean().optional(),
+  notes: z.string().optional(),
 });

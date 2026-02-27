@@ -1,9 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Navigation, Clock, MapPin, Sun } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Navigation,
+  Clock,
+  MapPin,
+  Sun,
+  Phone,
+  Globe,
+  SkipForward,
+  StickyNote,
+  Loader2,
+} from "lucide-react";
 import type { TripWithDetails, ItineraryItemRow } from "@/types";
 
 function parseTime(timeStr: string): number {
@@ -30,9 +49,15 @@ function formatCountdown(minutes: number): string {
 type TodayViewProps = {
   trip: TripWithDetails;
   todayDayIndex: number;
+  onItemUpdate?: (itemId: string, fields: Partial<ItineraryItemRow>) => Promise<void>;
 };
 
-export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
+export function TodayView({ trip, todayDayIndex, onItemUpdate }: TodayViewProps) {
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const todayItems = useMemo(() => {
     return trip.itineraryItems
       .filter((item: ItineraryItemRow) => item.dayIndex === todayDayIndex)
@@ -65,6 +90,31 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
     return parseTime(item.startTime) > nowMinutes;
   });
 
+  const handleSkip = async (itemId: string, currentSkipped: boolean | null | undefined) => {
+    if (onItemUpdate) {
+      await onItemUpdate(itemId, { skipped: !currentSkipped });
+    }
+  };
+
+  const openNoteModal = (item: ItineraryItemRow) => {
+    setActiveItemId(item.id);
+    setNoteText((item as ItineraryItemRow & { notes?: string | null }).notes || "");
+    setNoteModalOpen(true);
+  };
+
+  const saveNote = async () => {
+    if (!activeItemId || !onItemUpdate) return;
+    setSaving(true);
+    try {
+      await onItemUpdate(activeItemId, { notes: noteText });
+      setNoteModalOpen(false);
+      setActiveItemId(null);
+      setNoteText("");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (todayItems.length === 0) {
     return (
       <div className="text-center py-12">
@@ -90,8 +140,15 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
       </div>
 
       {todayItems.map((item, idx) => {
+        const extItem = item as ItineraryItemRow & {
+          phoneNumber?: string | null;
+          website?: string | null;
+          skipped?: boolean | null;
+          notes?: string | null;
+        };
         const isCurrent = idx === currentIdx;
         const isNext = idx === nextIdx;
+        const isSkipped = extItem.skipped;
         const minutesUntil = item.startTime
           ? parseTime(item.startTime) - nowMinutes
           : null;
@@ -101,11 +158,13 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
             key={item.id}
             data-testid={`today-item-${item.id}`}
             className={`transition-all ${
-              isCurrent
-                ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 ring-1 ring-indigo-500/30"
-                : isNext
-                  ? "border-amber-400/50 bg-amber-50/30 dark:bg-amber-950/20"
-                  : "bg-card border-border"
+              isSkipped
+                ? "opacity-50 border-muted bg-muted/30"
+                : isCurrent
+                  ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 ring-1 ring-indigo-500/30"
+                  : isNext
+                    ? "border-amber-400/50 bg-amber-50/30 dark:bg-amber-950/20"
+                    : "bg-card border-border"
             }`}
           >
             <CardHeader className="py-3 pb-0">
@@ -113,34 +172,41 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      isCurrent
-                        ? "bg-indigo-600 text-white"
-                        : isNext
-                          ? "bg-amber-500 text-white"
-                          : "bg-muted text-muted-foreground"
+                      isSkipped
+                        ? "bg-muted text-muted-foreground line-through"
+                        : isCurrent
+                          ? "bg-indigo-600 text-white"
+                          : isNext
+                            ? "bg-amber-500 text-white"
+                            : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {idx + 1}
                   </div>
                   <div>
-                    <CardTitle className="text-base text-card-foreground">
+                    <CardTitle className={`text-base ${isSkipped ? "line-through text-muted-foreground" : "text-card-foreground"}`}>
                       {item.location}
                     </CardTitle>
                     {item.startTime && (
                       <div className="flex items-center gap-2 mt-0.5">
                         <Clock className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
+                        <span className={`text-sm ${isSkipped ? "line-through" : ""} text-muted-foreground`}>
                           {item.startTime}
                           {item.endTime ? ` - ${item.endTime}` : ""}
                         </span>
-                        {isCurrent && (
+                        {!isSkipped && isCurrent && (
                           <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">
                             Now
                           </span>
                         )}
-                        {isNext && minutesUntil !== null && minutesUntil > 0 && (
+                        {!isSkipped && isNext && minutesUntil !== null && minutesUntil > 0 && (
                           <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full">
                             {formatCountdown(minutesUntil)}
+                          </span>
+                        )}
+                        {isSkipped && (
+                          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                            Skipped
                           </span>
                         )}
                       </div>
@@ -150,10 +216,11 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
               </div>
             </CardHeader>
             <CardContent className="py-3">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
+              <div className="flex flex-col gap-3">
+                {/* Description and Address */}
                 <div className="flex-1">
                   {item.description && (
-                    <p className="text-sm text-muted-foreground mb-2">
+                    <p className={`text-sm mb-2 ${isSkipped ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
                       {item.description}
                     </p>
                   )}
@@ -163,28 +230,147 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
                       {item.address}
                     </p>
                   )}
+                  {/* Show notes if they exist */}
+                  {extItem.notes && (
+                    <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-md border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-1">
+                        <StickyNote className="w-3 h-3 mt-0.5 shrink-0" />
+                        <span>{extItem.notes}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 ml-0 sm:ml-4 self-end sm:self-auto"
-                  asChild
-                  data-testid={`directions-${item.id}`}
-                >
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address || item.location)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+
+                {/* Quick Action Buttons */}
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
+                  {/* Directions - always shown */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    asChild
+                    data-testid={`directions-${item.id}`}
                   >
-                    <Navigation className="w-3 h-3 mr-1" />
-                    Directions
-                  </a>
-                </Button>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address || item.location)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Navigation className="w-3 h-3 mr-1" />
+                      Directions
+                    </a>
+                  </Button>
+
+                  {/* Call - shown if phone number available */}
+                  {extItem.phoneNumber && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      asChild
+                      data-testid={`call-${item.id}`}
+                    >
+                      <a href={`tel:${extItem.phoneNumber}`}>
+                        <Phone className="w-3 h-3 mr-1" />
+                        Call
+                      </a>
+                    </Button>
+                  )}
+
+                  {/* Book - shown if website available */}
+                  {extItem.website && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      asChild
+                      data-testid={`book-${item.id}`}
+                    >
+                      <a
+                        href={extItem.website.startsWith("http") ? extItem.website : `https://${extItem.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Globe className="w-3 h-3 mr-1" />
+                        Book
+                      </a>
+                    </Button>
+                  )}
+
+                  {/* Skip */}
+                  <Button
+                    variant={isSkipped ? "default" : "outline"}
+                    size="sm"
+                    className={`shrink-0 ${isSkipped ? "bg-muted hover:bg-muted/80" : ""}`}
+                    onClick={() => handleSkip(item.id, extItem.skipped)}
+                    data-testid={`skip-${item.id}`}
+                  >
+                    <SkipForward className="w-3 h-3 mr-1" />
+                    {isSkipped ? "Unskip" : "Skip"}
+                  </Button>
+
+                  {/* Add Note */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => openNoteModal(item)}
+                    data-testid={`note-${item.id}`}
+                  >
+                    <StickyNote className="w-3 h-3 mr-1" />
+                    {extItem.notes ? "Edit note" : "Add note"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         );
       })}
+
+      {/* Note Modal */}
+      <Dialog open={noteModalOpen} onOpenChange={setNoteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <StickyNote className="w-5 h-5" />
+              Quick Note
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="note" className="text-muted-foreground">
+                Add a note about this activity
+              </Label>
+              <Textarea
+                id="note"
+                placeholder="e.g., Great coffee here! Try the matcha latte..."
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                className="min-h-[100px] bg-muted border-border"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNoteModalOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={saveNote}
+              disabled={saving}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Save Note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

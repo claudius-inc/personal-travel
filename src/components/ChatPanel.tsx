@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Loader2, Bot, User, MapPin } from "lucide-react";
+import { Send, Loader2, Bot, User, MapPin, Coffee, Utensils, Sun, ArrowRight } from "lucide-react";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -15,6 +15,37 @@ type ChatPanelProps = {
   tripId: string;
   onItemsAdded: () => void;
 };
+
+const SUGGESTED_PROMPTS = [
+  {
+    icon: Coffee,
+    text: "Add a coffee shop nearby",
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40",
+    borderColor: "border-amber-200 dark:border-amber-800",
+  },
+  {
+    icon: Sun,
+    text: "What should I do tomorrow morning?",
+    color: "text-sky-600 dark:text-sky-400",
+    bgColor: "bg-sky-50 dark:bg-sky-950/30 hover:bg-sky-100 dark:hover:bg-sky-900/40",
+    borderColor: "border-sky-200 dark:border-sky-800",
+  },
+  {
+    icon: Utensils,
+    text: "Find a restaurant for dinner",
+    color: "text-rose-600 dark:text-rose-400",
+    bgColor: "bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40",
+    borderColor: "border-rose-200 dark:border-rose-800",
+  },
+  {
+    icon: ArrowRight,
+    text: "Move tomorrow's activities to today",
+    color: "text-violet-600 dark:text-violet-400",
+    bgColor: "bg-violet-50 dark:bg-violet-950/30 hover:bg-violet-100 dark:hover:bg-violet-900/40",
+    borderColor: "border-violet-200 dark:border-violet-800",
+  },
+];
 
 export function ChatPanel({ tripId, onItemsAdded }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -51,8 +82,8 @@ export function ChatPanel({ tripId, onItemsAdded }: ChatPanelProps) {
     return () => clearTimeout(timer);
   }, [displayedText, messages]);
 
-  const handleSend = async () => {
-    const trimmed = input.trim();
+  const handleSend = async (messageText?: string) => {
+    const trimmed = (messageText ?? input).trim();
     if (!trimmed || loading) return;
 
     const userMsg: ChatMessage = { role: "user", content: trimmed };
@@ -109,6 +140,13 @@ export function ChatPanel({ tripId, onItemsAdded }: ChatPanelProps) {
     }
   };
 
+  const handlePromptClick = (promptText: string) => {
+    handleSend(promptText);
+  };
+
+  // Only show suggestions when there's just the initial message
+  const showSuggestions = messages.length === 1;
+
   return (
     <div className="flex flex-col h-[60vh] sm:h-[600px] bg-card border border-border rounded-xl overflow-hidden">
       {/* Messages */}
@@ -160,6 +198,33 @@ export function ChatPanel({ tripId, onItemsAdded }: ChatPanelProps) {
             </div>
           );
         })}
+
+        {/* Suggested Prompts */}
+        {showSuggestions && !loading && (
+          <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <p className="text-xs font-medium text-muted-foreground mb-3 ml-11">
+              Try asking:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 ml-11">
+              {SUGGESTED_PROMPTS.map((prompt, idx) => {
+                const Icon = prompt.icon;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handlePromptClick(prompt.text)}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-sm font-medium transition-all border ${prompt.bgColor} ${prompt.borderColor} ${prompt.color}`}
+                    data-testid={`suggested-prompt-${idx}`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{prompt.text}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {loading && (
           <div className="flex gap-3 justify-start">
             <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shrink-0">
@@ -186,7 +251,7 @@ export function ChatPanel({ tripId, onItemsAdded }: ChatPanelProps) {
             data-testid="chat-input"
           />
           <Button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={loading || !input.trim()}
             className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
             data-testid="chat-send"

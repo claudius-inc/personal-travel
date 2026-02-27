@@ -30,6 +30,11 @@ export const itineraryItems = sqliteTable("itinerary_items", {
   lat: real("lat"),
   lng: real("lng"),
   sortOrder: integer("sort_order").default(0),
+  // Quick actions fields
+  phoneNumber: text("phone_number"),
+  website: text("website"),
+  skipped: integer("skipped", { mode: "boolean" }).default(false),
+  notes: text("notes"),
   createdAt: integer("created_at", { mode: "timestamp" }).default(new Date()),
 });
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download, CheckCircle, WifiOff, CloudOff } from "lucide-react";
 import { useGeocode } from "@/lib/useGeocode";
+import { useOfflineMap } from "@/lib/useOfflineMap";
 
 // Fix Leaflet's default icon issue in React
 const defaultIcon = L.icon({
@@ -64,6 +65,78 @@ export type MapMarker = {
   id?: string;
 };
 
+function OfflineIndicator({
+  status,
+  progress,
+  cachedTiles,
+  totalTiles,
+}: {
+  status: string;
+  progress: number;
+  cachedTiles: number;
+  totalTiles: number;
+}) {
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  if (status === "idle" || status === "checking") {
+    return null;
+  }
+
+  if (status === "downloading") {
+    return (
+      <div className="absolute top-3 right-3 z-[1000] bg-indigo-600 text-white px-3 py-2 rounded-lg shadow-lg text-sm flex items-center gap-2">
+        <Download className="w-4 h-4 animate-pulse" />
+        <div className="flex flex-col">
+          <span className="font-medium">Downloading for offline...</span>
+          <span className="text-xs opacity-80">
+            {cachedTiles} / {totalTiles} tiles ({progress}%)
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "ready") {
+    if (!isOnline) {
+      return (
+        <div className="absolute top-3 right-3 z-[1000] bg-amber-600 text-white px-3 py-2 rounded-lg shadow-lg text-sm flex items-center gap-2">
+          <WifiOff className="w-4 h-4" />
+          <span className="font-medium">Offline Mode</span>
+        </div>
+      );
+    }
+    return (
+      <div className="absolute top-3 right-3 z-[1000] bg-emerald-600 text-white px-3 py-2 rounded-lg shadow-lg text-sm flex items-center gap-2 opacity-90">
+        <CheckCircle className="w-4 h-4" />
+        <span className="font-medium">Available offline</span>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="absolute top-3 right-3 z-[1000] bg-red-600/90 text-white px-3 py-2 rounded-lg shadow-lg text-sm flex items-center gap-2">
+        <CloudOff className="w-4 h-4" />
+        <span className="font-medium">Offline cache failed</span>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export default function InteractiveMap({
   destination,
   markers = [],
@@ -81,6 +154,13 @@ export default function InteractiveMap({
     if (!coords) return null;
     return [coords.latitude, coords.longitude];
   }, [coords]);
+
+  // Offline map caching
+  const offlineMap = useOfflineMap(
+    coords?.latitude,
+    coords?.longitude,
+    true // Auto-cache when coordinates are available
+  );
 
   // If we have markers with valid coordinates, fit the map to them
   const validMarkers = markers.filter((m) => m.lat && m.lng);
@@ -114,6 +194,14 @@ export default function InteractiveMap({
 
   return (
     <div className="h-[500px] w-full relative z-0">
+      {/* Offline Status Indicator */}
+      <OfflineIndicator
+        status={offlineMap.status}
+        progress={offlineMap.progress}
+        cachedTiles={offlineMap.cachedTiles}
+        totalTiles={offlineMap.totalTiles}
+      />
+
       <MapContainer
         center={center}
         zoom={validMarkers.length > 1 ? 10 : 12}

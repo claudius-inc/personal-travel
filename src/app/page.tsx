@@ -12,6 +12,8 @@ import { db } from "@/db";
 import { trips } from "@/db/schema";
 import CreateTripForm from "./_components/CreateTripForm";
 import QuickImport from "./_components/QuickImport";
+import OnboardingOverlay from "@/components/OnboardingOverlay";
+import EmptyState from "@/components/EmptyState";
 
 export default async function Home() {
   let allTrips: (typeof trips.$inferSelect)[] = [];
@@ -25,6 +27,8 @@ export default async function Home() {
 
   return (
     <main className="container mx-auto max-w-5xl py-12 px-4 sm:px-6">
+      <OnboardingOverlay />
+      
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-3 md:gap-6">
         <div className="flex items-center gap-4">
           <Image
@@ -69,14 +73,7 @@ export default async function Home() {
               </p>
             </div>
           ) : allTrips.length === 0 ? (
-            <div className="text-center py-20 px-6 border border-border rounded-xl bg-muted shadow-sm">
-              <h3 className="text-lg font-medium text-foreground">
-                No trips planned
-              </h3>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Create a new itinerary to get started.
-              </p>
-            </div>
+            <EmptyState />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {allTrips.map((trip) => (
