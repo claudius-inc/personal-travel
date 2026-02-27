@@ -25,7 +25,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { ItineraryTimeline } from "@/components/ItineraryTimeline";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChatPanel } from "@/components/ChatPanel";
 import { TodayView } from "@/components/TodayView";
 import { ExpenseAnalytics } from "@/components/ExpenseAnalytics";
@@ -348,7 +347,6 @@ export default function TripDetailsClient({
         >
           &larr; Back to Dashboard
         </Link>
-        <ThemeToggle />
       </div>
 
       <header className="mb-10">

@@ -11,7 +11,7 @@ import {
 import { db } from "@/db";
 import { trips } from "@/db/schema";
 import CreateTripForm from "./_components/CreateTripForm";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import QuickImport from "./_components/QuickImport";
 
 export default async function Home() {
   let allTrips: (typeof trips.$inferSelect)[] = [];
@@ -43,7 +43,6 @@ export default async function Home() {
             </p>
           </div>
         </div>
-        <ThemeToggle />
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
@@ -114,7 +113,8 @@ export default async function Home() {
           )}
         </div>
 
-        <div>
+        <div className="space-y-6">
+          <QuickImport />
           <CreateTripForm />
         </div>
       </div>
