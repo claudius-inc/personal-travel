@@ -20,6 +20,19 @@ const defaultIcon = L.icon({
   shadowSize: [41, 41],
 });
 
+const selectedIcon = L.icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [30, 49],
+  iconAnchor: [15, 49],
+  popupAnchor: [1, -40],
+  tooltipAnchor: [16, -34],
+  shadowSize: [49, 49],
+  className: "selected-marker",
+});
+
 L.Marker.prototype.options.icon = defaultIcon;
 
 function MapUpdater({ center }: { center: [number, number] }) {
@@ -30,18 +43,37 @@ function MapUpdater({ center }: { center: [number, number] }) {
   return null;
 }
 
+function MapPanner({
+  target,
+}: {
+  target: [number, number] | null;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) {
+      map.flyTo(target, 14, { duration: 0.8 });
+    }
+  }, [target, map]);
+  return null;
+}
+
 export type MapMarker = {
   lat: number;
   lng: number;
   label: string;
+  id?: string;
 };
 
 export default function InteractiveMap({
   destination,
   markers = [],
+  selectedMarkerId,
+  onMarkerClick,
 }: {
   destination: string;
   markers?: MapMarker[];
+  selectedMarkerId?: string | null;
+  onMarkerClick?: (id: string | null) => void;
 }) {
   const { coords, loading: geoLoading } = useGeocode(destination);
 
@@ -52,6 +84,14 @@ export default function InteractiveMap({
 
   // If we have markers with valid coordinates, fit the map to them
   const validMarkers = markers.filter((m) => m.lat && m.lng);
+
+  // Find the selected marker to fly to
+  const selectedTarget = useMemo<[number, number] | null>(() => {
+    if (!selectedMarkerId) return null;
+    const marker = validMarkers.find((m) => m.id === selectedMarkerId);
+    if (!marker) return null;
+    return [marker.lat, marker.lng];
+  }, [selectedMarkerId, validMarkers]);
 
   if (geoLoading) {
     return (
@@ -92,13 +132,31 @@ export default function InteractiveMap({
         </Marker>
         {/* Plot itinerary item markers */}
         {validMarkers.map((marker, idx) => (
-          <Marker key={idx} position={[marker.lat, marker.lng]}>
+          <Marker
+            key={marker.id || idx}
+            position={[marker.lat, marker.lng]}
+            icon={
+              marker.id && marker.id === selectedMarkerId
+                ? selectedIcon
+                : defaultIcon
+            }
+            eventHandlers={{
+              click: () => {
+                if (marker.id && onMarkerClick) {
+                  onMarkerClick(
+                    marker.id === selectedMarkerId ? null : marker.id,
+                  );
+                }
+              },
+            }}
+          >
             <Popup>
               <span className="font-semibold">{marker.label}</span>
             </Popup>
           </Marker>
         ))}
         <MapUpdater center={center} />
+        <MapPanner target={selectedTarget} />
       </MapContainer>
     </div>
   );

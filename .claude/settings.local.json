@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(head:*)",
+      "WebFetch(domain:resident.com)",
+      "WebFetch(domain:www.phocuswire.com)",
+      "WebFetch(domain:www.travelaihub.com)",
+      "WebFetch(domain:finance.yahoo.com)",
+      "WebFetch(domain:mindtrip.ai)",
+      "Bash(npm install:*)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(ls:*)",
+      "Bash(npm run:*)",
+      "Bash(npx playwright:*)"
+    ]
+  }
+}

@@ -29,6 +29,7 @@ export const itineraryItems = sqliteTable("itinerary_items", {
   address: text("address"),
   lat: real("lat"),
   lng: real("lng"),
+  sortOrder: integer("sort_order").default(0),
   createdAt: integer("created_at", { mode: "timestamp" }).default(new Date()),
 });
 
@@ -50,6 +51,7 @@ export const expenses = sqliteTable("expenses", {
   amount: real("amount").notNull(),
   currency: text("currency").notNull().default("USD"),
   description: text("description").notNull(),
+  category: text("category"),
   paidBy: text("paid_by"),
   date: integer("date", { mode: "timestamp" }).notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).default(new Date()),

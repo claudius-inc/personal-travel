@@ -68,6 +68,7 @@ export const createExpenseSchema = z.object({
   amount: z.number().positive("Amount must be positive"),
   currency: z.string().min(1).max(3).optional().default("USD"),
   description: z.string().min(1, "Description is required"),
+  category: z.string().optional(),
   paidBy: z.string().optional(),
   date: z.string().min(1, "Date is required"),
 });
@@ -76,4 +77,36 @@ export const createInsightSchema = z.object({
   history: z.string().optional(),
   funFacts: z.string().optional(),
   spontaneousIdeas: z.string().optional(),
+});
+
+// ─── New feature schemas ──────────────────────────────────
+
+export const chatMessageSchema = z.object({
+  message: z.string().min(1, "Message is required"),
+});
+
+export const reorderItemsSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string(),
+      dayIndex: z.number().int().min(0),
+      sortOrder: z.number().int().min(0),
+    }),
+  ),
+});
+
+export const importUrlSchema = z.object({
+  url: z.string().url("Must be a valid URL"),
+});
+
+export const updateItemSchema = z.object({
+  dayIndex: z.number().int().min(0).optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  location: z.string().min(1).optional(),
+  description: z.string().optional(),
+  address: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  sortOrder: z.number().int().min(0).optional(),
 });

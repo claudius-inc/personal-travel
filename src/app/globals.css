@@ -124,3 +124,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Selected marker pulse animation */
+.selected-marker {
+  filter: hue-rotate(180deg) brightness(1.4);
+  animation: marker-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes marker-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}

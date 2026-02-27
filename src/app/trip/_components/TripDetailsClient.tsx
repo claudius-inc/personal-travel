@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,12 +17,18 @@ import {
   CalendarDays,
   Trash2,
   Share2,
+  MessageSquare,
+  Sun,
+  Link as LinkIcon,
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { ItineraryTimeline } from "@/components/ItineraryTimeline";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ChatPanel } from "@/components/ChatPanel";
+import { TodayView } from "@/components/TodayView";
+import { ExpenseAnalytics } from "@/components/ExpenseAnalytics";
 import type {
   TripWithDetails,
   Insight,
@@ -62,6 +68,33 @@ export default function TripDetailsClient({
   });
   const [addingExpense, setAddingExpense] = useState(false);
 
+  // Map-Itinerary linking
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
+  // URL import
+  const [importUrl, setImportUrl] = useState("");
+  const [importingUrl, setImportingUrl] = useState(false);
+
+  // Today view
+  const { isOnTrip, todayDayIndex } = useMemo(() => {
+    if (!trip.startDate || !trip.endDate) {
+      return { isOnTrip: false, todayDayIndex: 0 };
+    }
+    const now = new Date();
+    const start = new Date(trip.startDate);
+    const end = new Date(trip.endDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    now.setHours(12, 0, 0, 0);
+
+    if (now >= start && now <= end) {
+      const diffMs = now.getTime() - start.getTime();
+      const dayIndex = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+      return { isOnTrip: true, todayDayIndex: dayIndex };
+    }
+    return { isOnTrip: false, todayDayIndex: 0 };
+  }, [trip.startDate, trip.endDate]);
+
   const fetchTripManual = async () => {
     try {
       const res = await fetch(`/api/trips/${trip.id}`);
@@ -90,6 +123,24 @@ export default function TripDetailsClient({
     }
   };
 
+  const handleImportUrl = async () => {
+    if (!importUrl.trim()) return;
+    setImportingUrl(true);
+    try {
+      const res = await fetch(`/api/trips/${trip.id}/import-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: importUrl }),
+      });
+      if (res.ok) {
+        await fetchTripManual();
+        setImportUrl("");
+      }
+    } finally {
+      setImportingUrl(false);
+    }
+  };
+
   const fetchOrGenerateInsight = async (itemId: string) => {
     if (insights[itemId] || loadingInsights[itemId]) return;
 
@@ -111,6 +162,86 @@ export default function TripDetailsClient({
       }
     } finally {
       setLoadingInsights((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
+
+  // Inline edit handlers
+  const handleItemUpdate = async (
+    itemId: string,
+    fields: Partial<ItineraryItemRow>,
+  ) => {
+    const prevItems = trip.itineraryItems;
+    // Optimistic update
+    setTrip((prev) => ({
+      ...prev,
+      itineraryItems: prev.itineraryItems.map((item) =>
+        item.id === itemId ? { ...item, ...fields } : item,
+      ),
+    }));
+
+    try {
+      const res = await fetch(`/api/trips/${trip.id}/items/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fields),
+      });
+      if (!res.ok) throw new Error("Failed");
+    } catch {
+      // Rollback
+      setTrip((prev) => ({ ...prev, itineraryItems: prevItems }));
+    }
+  };
+
+  const handleItemDelete = async (itemId: string) => {
+    const prevItems = trip.itineraryItems;
+    // Optimistic remove
+    setTrip((prev) => ({
+      ...prev,
+      itineraryItems: prev.itineraryItems.filter((item) => item.id !== itemId),
+    }));
+
+    try {
+      const res = await fetch(`/api/trips/${trip.id}/items/${itemId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed");
+    } catch {
+      // Rollback
+      setTrip((prev) => ({ ...prev, itineraryItems: prevItems }));
+    }
+  };
+
+  // Reorder handler
+  const handleReorder = async (
+    items: Array<{ id: string; dayIndex: number; sortOrder: number }>,
+  ) => {
+    const prevItems = trip.itineraryItems;
+    // Optimistic update
+    setTrip((prev) => ({
+      ...prev,
+      itineraryItems: prev.itineraryItems.map((item) => {
+        const update = items.find((u) => u.id === item.id);
+        if (update) {
+          return {
+            ...item,
+            dayIndex: update.dayIndex,
+            sortOrder: update.sortOrder,
+          };
+        }
+        return item;
+      }),
+    }));
+
+    try {
+      const res = await fetch(`/api/trips/${trip.id}/reorder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      if (!res.ok) throw new Error("Failed");
+    } catch {
+      // Rollback
+      setTrip((prev) => ({ ...prev, itineraryItems: prevItems }));
     }
   };
 
@@ -193,13 +324,14 @@ export default function TripDetailsClient({
     );
   }
 
-  // Build markers from itinerary items for the map
+  // Build markers from itinerary items for the map (include id for linking)
   const mapMarkers: MapMarker[] = trip.itineraryItems
     .filter((item: ItineraryItemRow) => item.lat && item.lng)
     .map((item: ItineraryItemRow) => ({
       lat: item.lat!,
       lng: item.lng!,
       label: item.location,
+      id: item.id,
     }));
 
   const totalExpense = trip.expenses.reduce(
@@ -207,8 +339,11 @@ export default function TripDetailsClient({
     0,
   );
 
+  // Compute tab count for grid
+  const tabCount = 4 + (isOnTrip ? 1 : 0); // itinerary, map, expenses, chat + conditional today
+
   return (
-    <main className="container mx-auto max-w-5xl py-10 px-4 md:px-6">
+    <main className="container mx-auto max-w-6xl py-10 px-4 md:px-6">
       <div className="flex justify-between items-center mb-6">
         <Link
           href="/"
@@ -279,8 +414,21 @@ export default function TripDetailsClient({
         </div>
       </header>
 
-      <Tabs defaultValue="itinerary" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3 bg-muted border border-border rounded-lg p-1 mb-8">
+      <Tabs defaultValue={isOnTrip ? "today" : "itinerary"} className="w-full">
+        <TabsList
+          className={`grid w-full max-w-2xl grid-cols-${tabCount} bg-muted border border-border rounded-lg p-1 mb-8`}
+          style={{
+            gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))`,
+          }}
+        >
+          {isOnTrip && (
+            <TabsTrigger
+              value="today"
+              className="rounded-md data-[state=active]:bg-background data-[state=active]:text-amber-600 data-[state=active]:shadow-sm text-muted-foreground"
+            >
+              <Sun className="w-4 h-4 mr-2" /> Today
+            </TabsTrigger>
+          )}
           <TabsTrigger
             value="itinerary"
             className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground"
@@ -299,13 +447,30 @@ export default function TripDetailsClient({
           >
             <Receipt className="w-4 h-4 mr-2" /> Expenses
           </TabsTrigger>
+          <TabsTrigger
+            value="chat"
+            className="rounded-md data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm text-muted-foreground"
+          >
+            <MessageSquare className="w-4 h-4 mr-2" /> AI Chat
+          </TabsTrigger>
         </TabsList>
 
+        {/* Today Tab */}
+        {isOnTrip && (
+          <TabsContent
+            value="today"
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+          >
+            <TodayView trip={trip} todayDayIndex={todayDayIndex} />
+          </TabsContent>
+        )}
+
+        {/* Itinerary Tab — side-by-side with map */}
         <TabsContent
           value="itinerary"
           className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
         >
-          {/* Upload Section */}
+          {/* Upload + Import Section */}
           <Card className="bg-card border-border border-dashed shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg text-card-foreground">
@@ -316,34 +481,82 @@ export default function TripDetailsClient({
                 the schedule.
               </p>
             </CardHeader>
-            <CardContent className="flex items-center gap-4">
-              <Input
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="bg-muted border-border max-w-xs text-foreground"
-              />
-              <Button
-                onClick={handleUpload}
-                disabled={!file || uploading}
-                className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-              >
-                {uploading ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <UploadCloud className="w-4 h-4 mr-2" />
-                )}
-                {uploading ? "Extracting..." : "Parse File"}
-              </Button>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  className="bg-muted border-border max-w-xs text-foreground"
+                />
+                <Button
+                  onClick={handleUpload}
+                  disabled={!file || uploading}
+                  className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                >
+                  {uploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <UploadCloud className="w-4 h-4 mr-2" />
+                  )}
+                  {uploading ? "Extracting..." : "Parse File"}
+                </Button>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 flex-1 max-w-md">
+                  <LinkIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Input
+                    placeholder="Paste a URL to import (blog, article, itinerary)"
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.target.value)}
+                    className="bg-muted border-border text-foreground"
+                    data-testid="import-url-input"
+                  />
+                </div>
+                <Button
+                  onClick={handleImportUrl}
+                  disabled={!importUrl.trim() || importingUrl}
+                  variant="outline"
+                  data-testid="import-url-button"
+                >
+                  {importingUrl ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <UploadCloud className="w-4 h-4 mr-2" />
+                  )}
+                  {importingUrl ? "Importing..." : "Import URL"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          <ItineraryTimeline
-            items={trip.itineraryItems}
-            onInsightClick={fetchOrGenerateInsight}
-            insights={insights}
-            loadingInsights={loadingInsights}
-          />
+          {/* Side-by-side: Itinerary + Map */}
+          <div className="grid lg:grid-cols-5 gap-6">
+            <div className="lg:col-span-3">
+              <ItineraryTimeline
+                items={trip.itineraryItems}
+                onInsightClick={fetchOrGenerateInsight}
+                insights={insights}
+                loadingInsights={loadingInsights}
+                editable={true}
+                onItemUpdate={handleItemUpdate}
+                onItemDelete={handleItemDelete}
+                onReorder={handleReorder}
+                selectedItemId={selectedItemId}
+                onItemSelect={setSelectedItemId}
+              />
+            </div>
+            <div className="lg:col-span-2 lg:sticky lg:top-4 lg:self-start">
+              <Card className="bg-card border-border overflow-hidden shadow-sm">
+                <MapWidget
+                  destination={trip.name}
+                  markers={mapMarkers}
+                  selectedMarkerId={selectedItemId}
+                  onMarkerClick={setSelectedItemId}
+                />
+              </Card>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent
@@ -351,7 +564,12 @@ export default function TripDetailsClient({
           className="animate-in fade-in slide-in-from-bottom-4 duration-500"
         >
           <Card className="bg-card border-border overflow-hidden relative shadow-sm">
-            <MapWidget destination={trip.name} markers={mapMarkers} />
+            <MapWidget
+              destination={trip.name}
+              markers={mapMarkers}
+              selectedMarkerId={selectedItemId}
+              onMarkerClick={setSelectedItemId}
+            />
           </Card>
         </TabsContent>
 
@@ -359,7 +577,13 @@ export default function TripDetailsClient({
           value="expenses"
           className="animate-in fade-in slide-in-from-bottom-4 duration-500"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Expense Analytics */}
+          <ExpenseAnalytics
+            expenses={trip.expenses}
+            budget={trip.budget ?? 0}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
             <div className="md:col-span-2 space-y-4">
               <div className="flex justify-between items-center bg-card border border-border p-6 rounded-2xl shadow-sm">
                 <div>
@@ -507,6 +731,14 @@ export default function TripDetailsClient({
               </Card>
             </div>
           </div>
+        </TabsContent>
+
+        {/* AI Chat Tab */}
+        <TabsContent
+          value="chat"
+          className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <ChatPanel tripId={trip.id} onItemsAdded={fetchTripManual} />
         </TabsContent>
       </Tabs>
     </main>
