@@ -191,7 +191,7 @@ export function ExpenseAnalytics({ expenses, budget }: ExpenseAnalyticsProps) {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         {/* Category Breakdown */}
         <Card className="bg-card border-border shadow-sm">
           <CardHeader className="pb-2">
@@ -229,7 +229,7 @@ export function ExpenseAnalytics({ expenses, budget }: ExpenseAnalyticsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-between items-center mb-4 p-3 bg-muted rounded-lg">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 p-3 bg-muted rounded-lg gap-1">
               <span className="text-sm text-muted-foreground">Daily Avg</span>
               <span className="text-lg font-bold text-foreground">
                 ${dailyAvg.toFixed(0)}

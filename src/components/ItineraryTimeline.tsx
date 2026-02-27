@@ -18,6 +18,9 @@ import {
   GripVertical,
   Check,
   X,
+  UploadCloud,
+  Link as LinkIcon,
+  MessageSquare,
 } from "lucide-react";
 import type { ItineraryItemRow } from "@/types";
 import type { Insight } from "@/types";
@@ -159,7 +162,7 @@ function SortableItemCard({
     <div ref={mergedRef} style={style}>
       <Card
         data-testid={`itinerary-item-${item.id}`}
-        className={`bg-card border-border shadow-sm relative -left-4 w-[calc(100%+16px)] transition-all cursor-pointer ${
+        className={`bg-card border-border shadow-sm relative -left-0 sm:-left-4 w-full sm:w-[calc(100%+16px)] transition-all cursor-pointer ${
           isSelected
             ? "ring-2 ring-indigo-500 border-indigo-400"
             : "hover:border-foreground/20"
@@ -172,7 +175,7 @@ function SortableItemCard({
               <div
                 {...attributes}
                 {...listeners}
-                className="cursor-grab active:cursor-grabbing mt-1 text-muted-foreground hover:text-foreground"
+                className="cursor-grab active:cursor-grabbing mt-0 p-2 -m-2 text-muted-foreground hover:text-foreground"
                 data-testid={`drag-handle-${item.id}`}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -476,8 +479,32 @@ export function ItineraryTimeline({
 
   if (Object.keys(itemsByDay).length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        No itinerary items yet. Upload a schedule or wait for the agent.
+      <div className="py-12 flex flex-col items-center">
+        <h3 className="text-lg font-semibold text-foreground mb-2">No itinerary items yet</h3>
+        <p className="text-sm text-muted-foreground mb-8">Get started by adding activities to your trip</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-lg">
+          <div className="flex flex-col items-center text-center p-4 rounded-xl border border-border bg-card">
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-3">
+              <UploadCloud className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Upload a file</p>
+            <p className="text-xs text-muted-foreground mt-1">Drop a PDF or photo of your itinerary</p>
+          </div>
+          <div className="flex flex-col items-center text-center p-4 rounded-xl border border-border bg-card">
+            <div className="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-900/50 flex items-center justify-center mb-3">
+              <LinkIcon className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Paste a URL</p>
+            <p className="text-xs text-muted-foreground mt-1">Import from a travel blog or article</p>
+          </div>
+          <div className="flex flex-col items-center text-center p-4 rounded-xl border border-border bg-card">
+            <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center mb-3">
+              <MessageSquare className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Ask AI</p>
+            <p className="text-xs text-muted-foreground mt-1">Chat with AI to plan your trip</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -501,7 +528,7 @@ export function ItineraryTimeline({
             .sort((a, b) => parseInt(a) - parseInt(b))
             .map((day) => (
               <div key={day} className="relative">
-                <h3 className="text-2xl font-semibold mb-6 flex items-center gap-3 text-foreground">
+                <h3 className="text-xl sm:text-2xl font-semibold mb-6 flex items-center gap-3 text-foreground">
                   <span
                     className={`flex items-center justify-center w-8 h-8 rounded-full ${badgeBg} ${badgeText} text-sm font-bold`}
                   >
@@ -509,7 +536,7 @@ export function ItineraryTimeline({
                   </span>
                   Day {day}
                 </h3>
-                <div className="space-y-4 pl-4 border-l-2 border-border ml-4">
+                <div className="space-y-4 pl-2 sm:pl-4 border-l-2 border-border ml-2 sm:ml-4">
                   {itemsByDay[day].map((item) => (
                     <SortableItemCard
                       key={item.id}

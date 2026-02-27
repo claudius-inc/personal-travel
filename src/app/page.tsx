@@ -24,8 +24,8 @@ export default async function Home() {
   }
 
   return (
-    <main className="container mx-auto max-w-5xl py-12 px-6">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
+    <main className="container mx-auto max-w-5xl py-12 px-4 sm:px-6">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-3 md:gap-6">
         <div className="flex items-center gap-4">
           <Image
             src="/logo.png"
@@ -46,7 +46,7 @@ export default async function Home() {
         <ThemeToggle />
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
         <div className="md:col-span-2 space-y-6">
           <h2 className="text-2xl font-medium text-foreground">
             Upcoming Trips
@@ -79,7 +79,7 @@ export default async function Home() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {allTrips.map((trip) => (
                 <Link
                   href={`/trip/${trip.id}`}

@@ -110,9 +110,9 @@ export function ChatPanel({ tripId, onItemsAdded }: ChatPanelProps) {
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-card border border-border rounded-xl overflow-hidden">
+    <div className="flex flex-col h-[60vh] sm:h-[600px] bg-card border border-border rounded-xl overflow-hidden">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
         {messages.map((msg, idx) => {
           const isLast = idx === messages.length - 1;
           const isTyping =
@@ -130,7 +130,7 @@ export function ChatPanel({ tripId, onItemsAdded }: ChatPanelProps) {
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                className={`max-w-[90%] sm:max-w-[80%] rounded-xl px-4 py-3 ${
                   msg.role === "user"
                     ? "bg-indigo-600 text-white"
                     : "bg-muted text-foreground"
@@ -174,7 +174,7 @@ export function ChatPanel({ tripId, onItemsAdded }: ChatPanelProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-border p-4">
+      <div className="border-t border-border p-3 sm:p-4">
         <div className="flex gap-2">
           <Input
             value={input}

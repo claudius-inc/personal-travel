@@ -339,11 +339,8 @@ export default function TripDetailsClient({
     0,
   );
 
-  // Compute tab count for grid
-  const tabCount = 4 + (isOnTrip ? 1 : 0); // itinerary, map, expenses, chat + conditional today
-
   return (
-    <main className="container mx-auto max-w-6xl py-10 px-4 md:px-6">
+    <main className="container mx-auto max-w-6xl py-10 px-3 sm:px-4 md:px-6">
       <div className="flex justify-between items-center mb-6">
         <Link
           href="/"
@@ -355,7 +352,7 @@ export default function TripDetailsClient({
       </div>
 
       <header className="mb-10">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-500 bg-clip-text text-transparent">
               {trip.name}
@@ -376,13 +373,13 @@ export default function TripDetailsClient({
               )}
             </p>
           </div>
-          <div className="text-right flex flex-col items-end gap-3">
+          <div className="text-left md:text-right flex flex-col items-start md:items-end gap-3">
             <WeatherWidget destination={trip.name} />
             <div>
               <span className="block text-sm text-muted-foreground">
                 Total Budget
               </span>
-              <span className="text-2xl font-bold text-foreground">
+              <span className="text-xl sm:text-2xl font-bold text-foreground">
                 ${trip.budget || 0}
               </span>
             </div>
@@ -415,10 +412,11 @@ export default function TripDetailsClient({
       </header>
 
       <Tabs defaultValue={isOnTrip ? "today" : "itinerary"} className="w-full">
+        <div className="overflow-x-auto -mx-3 px-3 sm:-mx-0 sm:px-0">
         <TabsList
-          className={`grid w-full max-w-2xl grid-cols-${tabCount} bg-muted border border-border rounded-lg p-1 mb-8`}
+          className="flex w-max sm:w-full max-w-2xl bg-muted border border-border rounded-lg p-1 mb-8"
           style={{
-            gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))`,
+            display: "flex",
           }}
         >
           {isOnTrip && (
@@ -454,6 +452,7 @@ export default function TripDetailsClient({
             <MessageSquare className="w-4 h-4 mr-2" /> AI Chat
           </TabsTrigger>
         </TabsList>
+        </div>
 
         {/* Today Tab */}
         {isOnTrip && (
@@ -482,12 +481,12 @@ export default function TripDetailsClient({
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <Input
                   type="file"
                   accept="image/*,application/pdf"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  className="bg-muted border-border max-w-xs text-foreground"
+                  className="bg-muted border-border max-w-full sm:max-w-xs text-foreground"
                 />
                 <Button
                   onClick={handleUpload}
@@ -502,8 +501,8 @@ export default function TripDetailsClient({
                   {uploading ? "Extracting..." : "Parse File"}
                 </Button>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 flex-1 max-w-md">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2 flex-1 max-w-full sm:max-w-md w-full">
                   <LinkIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                   <Input
                     placeholder="Paste a URL to import (blog, article, itinerary)"
@@ -531,8 +530,8 @@ export default function TripDetailsClient({
           </Card>
 
           {/* Side-by-side: Itinerary + Map */}
-          <div className="grid lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-3">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+            <div className="md:col-span-3">
               <ItineraryTimeline
                 items={trip.itineraryItems}
                 onInsightClick={fetchOrGenerateInsight}
@@ -546,7 +545,7 @@ export default function TripDetailsClient({
                 onItemSelect={setSelectedItemId}
               />
             </div>
-            <div className="lg:col-span-2 lg:sticky lg:top-4 lg:self-start">
+            <div className="md:col-span-2 md:sticky md:top-4 md:self-start">
               <Card className="bg-card border-border overflow-hidden shadow-sm">
                 <MapWidget
                   destination={trip.name}
@@ -583,19 +582,19 @@ export default function TripDetailsClient({
             budget={trip.budget ?? 0}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mt-6">
             <div className="md:col-span-2 space-y-4">
-              <div className="flex justify-between items-center bg-card border border-border p-6 rounded-2xl shadow-sm">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-card border border-border p-6 rounded-2xl shadow-sm gap-4">
                 <div>
                   <p className="text-muted-foreground text-sm">Total Spent</p>
-                  <h3 className="text-4xl font-bold mt-1 text-foreground">
+                  <h3 className="text-2xl sm:text-4xl font-bold mt-1 text-foreground">
                     ${totalExpense.toFixed(2)}
                   </h3>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-muted-foreground text-sm">Remaining</p>
                   <h3
-                    className={`text-2xl font-bold mt-1 ${(trip.budget ?? 0) - totalExpense < 0 ? "text-red-500" : "text-emerald-500"}`}
+                    className={`text-lg sm:text-2xl font-bold mt-1 ${(trip.budget ?? 0) - totalExpense < 0 ? "text-red-500" : "text-emerald-500"}`}
                   >
                     ${((trip.budget ?? 0) - totalExpense).toFixed(2)}
                   </h3>

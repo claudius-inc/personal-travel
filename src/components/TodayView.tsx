@@ -109,7 +109,7 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
             }`}
           >
             <CardHeader className="py-3 pb-0">
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
@@ -150,7 +150,7 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
               </div>
             </CardHeader>
             <CardContent className="py-3">
-              <div className="flex justify-between items-end">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
                 <div className="flex-1">
                   {item.description && (
                     <p className="text-sm text-muted-foreground mb-2">
@@ -167,7 +167,7 @@ export function TodayView({ trip, todayDayIndex }: TodayViewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="shrink-0 ml-4"
+                  className="shrink-0 ml-0 sm:ml-4 self-end sm:self-auto"
                   asChild
                   data-testid={`directions-${item.id}`}
                 >
